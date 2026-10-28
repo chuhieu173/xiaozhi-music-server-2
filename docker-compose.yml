@@ -1,0 +1,13 @@
+services:
+  music-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: music-server
+    restart: unless-stopped
+    ports:
+      - "10000:10000"
+    environment:
+      - PORT=10000
+      - CORS_ORIGINS=*
+      - YOUTUBE_PLAYER_CLIENTS=tv_embedded,web_safari,android_vr
