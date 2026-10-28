@@ -21,6 +21,8 @@ uvicorn app:app --reload
 
 Mở `/` để dùng giao diện test tìm kiếm và phát nhạc trên trình duyệt. Với XiaoZhi ESP32, gọi `/stream_pcm?song=...&artist=...`, sau đó phát `audio_url`. Endpoint MP3 cần FFmpeg; Dockerfile cài FFmpeg trong image.
 
+Server dùng các YouTube player client không cần cookie, ưu tiên `tv_embedded` để giảm lỗi bot check trên IP Render. Có thể đổi thứ tự bằng biến môi trường `YOUTUBE_PLAYER_CLIENTS`.
+
 ## Deploy Render
 
 1. Push thư mục này lên GitHub.

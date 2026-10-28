@@ -70,6 +70,11 @@ _search_cache: dict[str, tuple[float, list[Track]]] = {}
 _stream_cache: dict[str, tuple[float, StreamResponse]] = {}
 SEARCH_TTL = int(os.getenv("SEARCH_CACHE_TTL", "300"))
 STREAM_TTL = int(os.getenv("STREAM_CACHE_TTL", "180"))
+YOUTUBE_PLAYER_CLIENTS = [
+    client.strip()
+    for client in os.getenv("YOUTUBE_PLAYER_CLIENTS", "tv_embedded,web_safari,android_vr").split(",")
+    if client.strip()
+]
 
 
 def _thumbnail(item: dict[str, Any]) -> str | None:
@@ -107,12 +112,29 @@ def _resolve_stream_sync(video_id: str) -> StreamResponse:
     cached = _stream_cache.get(video_id)
     if cached and cached[0] > now:
         return cached[1]
-    options = {"quiet": True, "no_warnings": True, "skip_download": True, "format": "bestaudio/best", "noplaylist": True}
-    try:
-        with yt_dlp.YoutubeDL(options) as ydl:
-            info = ydl.extract_info(f"https://music.youtube.com/watch?v={video_id}", download=False)
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Không lấy được stream: {exc}") from exc
+    info = None
+    errors: list[str] = []
+    for player_client in YOUTUBE_PLAYER_CLIENTS:
+        options = {
+            "quiet": True,
+            "no_warnings": True,
+            "skip_download": True,
+            "format": "bestaudio/best",
+            "noplaylist": True,
+            "extractor_args": {"youtube": {"player_client": [player_client]}},
+        }
+        try:
+            with yt_dlp.YoutubeDL(options) as ydl:
+                info = ydl.extract_info(f"https://www.youtube.com/watch?v={video_id}", download=False)
+            if info:
+                break
+        except Exception as exc:
+            errors.append(f"{player_client}: {exc}")
+    if not info:
+        detail = errors[-1] if errors else "Không có player client khả dụng"
+        if "Sign in to confirm" in detail or "not a bot" in detail:
+            detail = "YouTube đang chặn IP Render (bot check); hãy thử lại hoặc dùng player client khác"
+        raise HTTPException(status_code=502, detail=detail)
     formats = [f for f in info.get("formats", []) if f.get("url") and f.get("acodec") != "none"]
     if not formats and info.get("url"):
         formats = [info]

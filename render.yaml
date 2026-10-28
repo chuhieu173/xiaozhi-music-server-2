@@ -9,3 +9,5 @@ services:
     envVars:
       - key: CORS_ORIGINS
         value: "*"
+      - key: YOUTUBE_PLAYER_CLIENTS
+        value: "tv_embedded,web_safari,android_vr"
